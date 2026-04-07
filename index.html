@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSA Population Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f6f8fa;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        select {
+            padding: 8px;
+            font-size: 16px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            width: 100%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>📈 PSA Population Tracker</h1>
+        
+        <div class="controls">
+            <label for="cardSelect"><strong>Select a Card:</strong></label><br>
+            <select id="cardSelect" onchange="updateChart()">
+                <option value="">Loading cards...</option>
+            </select>
+        </div>
+
+        <canvas id="popChart" width="400" height="200"></canvas>
+    </div>
+
+    <script>
+        let rawData = [];
+        let chartInstance = null;
+
+        // 1. Fetch and Parse the CSV file
+        Papa.parse("psa_data.csv", {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                rawData = results.data;
+                populateDropdown();
+            },
+            error: function(err) {
+                console.error("Error reading CSV:", err);
+                document.getElementById('cardSelect').innerHTML = '<option>Error loading data. Is psa_data.csv in the repo?</option>';
+            }
+        });
+
+        // 2. Populate the Dropdown menu with unique cards
+        function populateDropdown() {
+            const select = document.getElementById('cardSelect');
+            select.innerHTML = ''; 
+
+            // Extract unique card names (combining Number and Name for clarity)
+            const uniqueCards = [...new Set(rawData.map(item => `${item['Card Number']} - ${item['Card Name']}`))];
+            
+            if (uniqueCards.length === 0) {
+                select.innerHTML = '<option>No data found yet.</option>';
+                return;
+            }
+
+            uniqueCards.forEach(card => {
+                const option = document.createElement('option');
+                option.value = card;
+                option.textContent = card;
+                select.appendChild(option);
+            });
+
+            // Draw the initial chart with the first card in the list
+            updateChart();
+        }
+
+        // 3. Filter data and update the Chart
+        function updateChart() {
+            const selectedValue = document.getElementById('cardSelect').value;
+            
+            // Filter the raw data for the selected card
+            const cardData = rawData.filter(item => `${item['Card Number']} - ${item['Card Name']}` === selectedValue);
+            
+            // Sort by Date just in case
+            cardData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+
+            const labels = cardData.map(item => item.Date);
+            const totalPop = cardData.map(item => parseInt(item['Total Pop'].replace(/,/g, '')) || 0);
+            const psa10Pop = cardData.map(item => parseInt(item['PSA 10'].replace(/,/g, '')) || 0);
+            const psa9Pop = cardData.map(item => parseInt(item['PSA 9'].replace(/,/g, '')) || 0);
+
+            const ctx = document.getElementById('popChart').getContext('2d');
+
+            // Destroy old chart instance if it exists before drawing a new one
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Total Population',
+                            data: totalPop,
+                            borderColor: '#24292e',
+                            backgroundColor: 'rgba(36, 41, 46, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'PSA 10',
+                            data: psa10Pop,
+                            borderColor: '#28a745',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'PSA 9',
+                            data: psa9Pop,
+                            borderColor: '#0366d6',
+                            backgroundColor: 'rgba(3, 102, 214, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: false // Set to true if you want the Y-axis to always start at 0
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
