@@ -41,22 +41,32 @@ def main():
         if len(tds) < 3:
             continue
             
-        card_num = " ".join(tds[idx_num].css('::text').getall()).strip() if idx_num != -1 else ""
-        card_name = " ".join(tds[idx_name].css('::text').getall()).strip() if idx_name != -1 else ""
+        # CARD NUMBER
+        num_texts = [t.strip() for t in tds[idx_num].css('::text').getall() if t.strip()]
+        card_num = num_texts[0] if num_texts else ""
         
-        card_num = " ".join(card_num.split())
-        card_name = " ".join(card_name.split())
+        # CARD NAME
+        name_texts = [t.strip() for t in tds[idx_name].css('::text').getall() if t.strip()]
+        # Remove the affiliate link text
+        name_texts = [t for t in name_texts if "Shop with Affiliates" not in t]
+        card_name = " ".join(name_texts)
         
         if not card_num and not card_name:
             continue
             
-        psa_9 = " ".join(tds[idx_9].css('::text').getall()).strip() if idx_9 != -1 else "0"
-        psa_10 = " ".join(tds[idx_10].css('::text').getall()).strip() if idx_10 != -1 else "0"
-        total = " ".join(tds[idx_total].css('::text').getall()).strip() if idx_total != -1 else "0"
-        
-        if not psa_9 or psa_9 == "-": psa_9 = "0"
-        if not psa_10 or psa_10 == "-": psa_10 = "0"
-        if not total or total == "-": total = "0"
+        # NUMBERS - Helper function to grab ONLY the top number
+        def get_top_number(td_index):
+            if td_index == -1: return "0"
+            # Get all text pieces, ignore blanks
+            texts = [t.strip() for t in tds[td_index].css('::text').getall() if t.strip()]
+            # Grab the first piece of text (the top row)
+            val = texts[0] if texts else "0"
+            # If PSA puts a dash instead of a zero, fix it
+            return "0" if val == "-" else val
+            
+        psa_9 = get_top_number(idx_9)
+        psa_10 = get_top_number(idx_10)
+        total = get_top_number(idx_total)
         
         new_data.append([today, card_num, card_name, total, psa_10, psa_9])
     
