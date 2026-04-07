@@ -41,27 +41,20 @@ def main():
         if len(tds) < 3:
             continue
             
-        # CARD NUMBER
         num_texts = [t.strip() for t in tds[idx_num].css('::text').getall() if t.strip()]
         card_num = num_texts[0] if num_texts else ""
         
-        # CARD NAME
-        name_texts = [t.strip() for t in tds[idx_name].css('::text').getall() if t.strip()]
-        # Remove the affiliate link text
-        name_texts = [t for t in name_texts if "Shop with Affiliates" not in t]
-        card_name = " ".join(name_texts)
+        raw_name = " ".join(tds[idx_name].css('::text').getall())
+        card_name = raw_name.replace("Shop with Affiliates", "").strip()
+        card_name = " ".join(card_name.split())
         
         if not card_num and not card_name:
             continue
             
-        # NUMBERS - Helper function to grab ONLY the top number
         def get_top_number(td_index):
             if td_index == -1: return "0"
-            # Get all text pieces, ignore blanks
             texts = [t.strip() for t in tds[td_index].css('::text').getall() if t.strip()]
-            # Grab the first piece of text (the top row)
             val = texts[0] if texts else "0"
-            # If PSA puts a dash instead of a zero, fix it
             return "0" if val == "-" else val
             
         psa_9 = get_top_number(idx_9)
