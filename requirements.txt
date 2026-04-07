@@ -1,3 +1,4 @@
 scrapling
 playwright
 curl-cffi
+patchright
